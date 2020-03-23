@@ -120,14 +120,14 @@ namespace DesignStreaks.Data.SqlClient
             if (typeof(T).BaseType == typeof(Enum))
             {                                                                                                                   //
                 stringToEnum = Expression.Call(                                                                                 // GenericExtensions.ToEnum<T>(valueString)
+                    // ReSharper disable once PossibleNullReferenceException
                     typeof(GenericExtensions).GetMethod(nameof(GenericExtensions.ToEnum), new[] { typeof(string) })             //
                         .MakeGenericMethod(typeof(T)),                                                                          //
                     Expression.Convert(readerGetValueCall, typeof(string)));                                                    //
             }                                                                                                                   //
 
-            var returnLabel = Expression.Label(typeof(T));                                                                      //
-            
-            var forBlock = Expression.Block(
+            var returnLabel = Expression.Label(typeof(T));                                                                      //            
+            var forBlock = Expression.Block(                                                                                    //
                 new[] { indexParam, value },                                                                                    //
                 Expression.Assign(indexParam, Expression.Constant(0)),                                                          // var i = 0
                 Expression.Loop(                                                                                                // while(true)
@@ -142,16 +142,17 @@ namespace DesignStreaks.Data.SqlClient
                                         Expression.Assign(value, Expression.Default(typeof(T))),                                //                 value = Default(DateTime)
                                         Expression.Return(returnLabel, value)                                                   //                 return value
                                     ),                                                                                          //              }
-                                    typeof(T).BaseType == typeof(Enum)                                                          // #IF typeof(T).BaseType = typeof(Enum)
+                                    typeof(T).BaseType == typeof(Enum)                                                          // ## IF typeof(T).BaseType = typeof(Enum)
                                         ? Expression.Block(                                                                     //              else {
-                                            // ReSharper disable once AssignNullToNotNullAttribute
+                                            // ReSharper disable once AssignNullToNotNullAttribute                              //
                                             Expression.Assign(value, stringToEnum),                                             //                  value = ((string)reader.GetValue(i)).ToEnum<T>();
                                             Expression.Return(returnLabel, value)                                               //                  return value
                                         )                                                                                       //              }
-                                        : Expression.Block(                                                                     // #ELSE        else{
+                                        : Expression.Block(                                                                     // ## ELSE      else{
                                             Expression.Assign(value, Expression.Convert(readerGetValueCall, typeof(T))),        //                  value = (T)(reader.GetValue(i))
                                             Expression.Return(returnLabel, value)                                               //                  return value
                                         )                                                                                       //              }
+                                                                                                                                // ## ENDIF
                                 )                                                                                               //
                             ),                                                                                                  //         }
                             Expression.Block(                                                                                   //         else {
