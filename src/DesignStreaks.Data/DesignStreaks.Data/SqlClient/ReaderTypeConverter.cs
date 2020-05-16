@@ -2,7 +2,7 @@
 // * DESIGNSTREAKS CONFIDENTIAL
 // * __________________
 // *
-// *  Copyright © Design Streaks - 2010 - 2018
+// *  Copyright © Design Streaks - 2010 - 2020
 // *  All Rights Reserved.
 // *
 // * NOTICE:  All information contained herein is, and remains
@@ -15,12 +15,14 @@
 // * is strictly forbidden unless prior written permission is obtained
 // * from DesignStreaks.
 
+
 namespace DesignStreaks.Data.SqlClient
 {
     using System;
     using System.Collections.Generic;
     using System.Data.Common;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
@@ -30,13 +32,14 @@ namespace DesignStreaks.Data.SqlClient
     internal static class ReaderTypeConverter
     {
         /// <summary>Lock used for Read/Write lock creation.</summary>
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
         private static readonly ReaderWriterLockSlim __lock__ = new ReaderWriterLockSlim();
 
-        /// <summary>Cached instance of the method info for the BuildGetValue method.</summary>
+        /// <summary>Cached instance of the method info for the <see cref="BuildGetValue{T}"/> method.</summary>
         private static readonly MethodInfo buildGetValueMethod = typeof(ReaderTypeConverter).GetMethod("BuildGetValue", BindingFlags.Static | BindingFlags.NonPublic);
 
         /// <summary>A dictionary containing the set of compiled expressions used to convert a DbDataReader row into a concrete class representation.</summary>
-        private static Dictionary<string, Dictionary<string, Delegate>> typeConverters = new Dictionary<string, Dictionary<string, Delegate>>();
+        private static readonly Dictionary<string, Dictionary<string, Delegate>> typeConverters = new Dictionary<string, Dictionary<string, Delegate>>();
 
         /// <summary>Gets a dictionary of conversion functions for each property of the specified <paramref name="type"/>.</summary>
         /// <param name="type">The type to retrieve the dictionary for.</param>
@@ -84,6 +87,8 @@ namespace DesignStreaks.Data.SqlClient
         /// <summary>Builds the expression to get the value for a type from the a DbDataReader.</summary>
         /// <typeparam name="T"></typeparam>
         /// <returns>Func&lt;System.String, DbDataReader, T&gt;.</returns>
+        [SuppressMessage("ReSharper", "AssignNullToNotNullAttribute")]
+        [SuppressMessage("ReSharper", "UnusedMember.Local")]
         private static Func<string, DbDataReader, T> BuildGetValue<T>()
         {
             Trace.WriteLine($"{typeof(ReaderTypeConverter).Name }.BuildGetValue: Building Expression - {typeof(T).Name}");
@@ -120,9 +125,8 @@ namespace DesignStreaks.Data.SqlClient
             if (typeof(T).BaseType == typeof(Enum))
             {                                                                                                                   //
                 stringToEnum = Expression.Call(                                                                                 // GenericExtensions.ToEnum<T>(valueString)
-                    // ReSharper disable once PossibleNullReferenceException
                     typeof(GenericExtensions).GetMethod(nameof(GenericExtensions.ToEnum), new[] { typeof(string) })             //
-                        .MakeGenericMethod(typeof(T)),                                                                          //
+                        ?.MakeGenericMethod(typeof(T)),                                                                         //
                     Expression.Convert(readerGetValueCall, typeof(string)));                                                    //
             }                                                                                                                   //
 

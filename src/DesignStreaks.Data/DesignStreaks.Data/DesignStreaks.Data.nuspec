@@ -16,6 +16,7 @@
 
     <!-- License and project URLs provide links for the gallery -->
     <license type="CC-BY-1.0">Creative Commons</license>
+    <!--<licenseUrl>http://designstreaks.com.au</licenseUrl>-->
     <projectUrl>https://github.com/DesignStreaks/DesignStreaks.Data</projectUrl>
 
     <!-- The icon is used in Visual Studio's package manager UI -->

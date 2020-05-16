@@ -2,7 +2,7 @@
 // * DESIGNSTREAKS CONFIDENTIAL
 // * __________________
 // *
-// *  Copyright © Design Streaks - 2010 - 2018
+// *  Copyright © Design Streaks - 2010 - 2020
 // *  All Rights Reserved.
 // *
 // * NOTICE:  All information contained herein is, and remains
@@ -15,6 +15,7 @@
 // * is strictly forbidden unless prior written permission is obtained
 // * from DesignStreaks.
 
+// ReSharper disable BadControlBracesIndent
 namespace DesignStreaks.Data.SqlClient.Types
 {
     using System;
@@ -26,33 +27,77 @@ namespace DesignStreaks.Data.SqlClient.Types
     using System.Reflection;
     using Microsoft.SqlServer.Server;
 
-    /// <summary>Translates any IEnumerable into a Table Value Parameter for passing through to Sql Server stored procedures..</summary>
-    /// <typeparam name="T">The list item type.</typeparam>
+    /// <summary>
+    ///   Extention methods to create <see cref="IEnumerable{T}" /> of
+    ///   <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord" /> objects from any <see cref="System.Collections.Generic.IEnumerable{T}" />.
+    /// </summary>
+    public static class TableValuedParameterExtensions
+    {
+        /// <summary>
+        ///   Translates any IEnumerable into a Table Value Parameter for passing through to Sql Server stored procedures.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parameterList">The list of items to convert to a <see cref="TableValuedParameter{T}" />.</param>
+        /// <param name="includedColumns">
+        ///   The list of column names to include in being mapped to the <see cref="TableValuedParameter{T}" />. If null,
+        ///   all fields with <see cref="DbColumnAttribute" /> are mapped.
+        /// </param>
+        /// <param name="excludedColumns">The list of column names to exclude from being mapped to the <see cref="TableValuedParameter{T}" />.</param>
+        /// <returns>
+        ///   Returns an enumeration of <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord" /> items to be used as a
+        ///   parameter input into a SqlServer table valued parameter.
+        /// </returns>
+        /// <example>
+        ///   The following example will only map the fields <c>Id</c> and <c>Code</c> from each item in the
+        ///   <see cref="IEnumerable{T}" /><c>list</c> of a class with a single field
+        ///   <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord" /> objects.
+        ///   <code lang="cs">
+        /// public class SomeClass
+        /// {
+        ///     [DbColumnAttribute(1)]
+        ///     public string Code { get; set; }
+        ///     public string Description { get; set; }
+        ///     [DbColumnAttribute(0)]
+        ///     public int Id { get; set; }
+        /// }
+        ///
+        /// IEnumerable&lt;SomeClass&gt; list = new List&lt;SomeClass&gt;();
+        /// list.ToTableValuedParameter();
+        ///   </code>
+        /// </example>
+        public static TableValuedParameter<T> ToTableValuedParameter<T>(this IEnumerable<T> parameterList, IEnumerable<string> includedColumns = null, IEnumerable<string> excludedColumns = null) where T : new()
+        {
+            return new TableValuedParameter<T>(parameterList, includedColumns, excludedColumns);
+        }
+    }
+
+    /// <summary>
+    ///   Represents an <see cref="IEnumerable{T}" /> of a specified type as
+    ///   <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord" /> objects for passing a Sql Server stored procedure
+    /// </summary>
+    /// <typeparam name="T">
+    ///   The type of the item to translate to a <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord" /> object.
+    /// </typeparam>
     /// <seealso cref="System.Collections.Generic.IEnumerable{T}" />
-    /// <seealso cref="Microsoft.SqlServer.Server.SqlDataRecord"/>
+    /// <seealso cref="T:Microsoft.SqlServer.Server.SqlDataRecord" />
     public class TableValuedParameter<T> : IEnumerable<SqlDataRecord> where T : new()
     {
 #pragma warning disable RECS0108 // Warns about static fields in generic types
+
         private static SortedList<int, FunctionStub> propertyAccessors;
 
         /// <summary>Dictionary of Native to Sql type mappings.</summary>
-        private static Dictionary<Type, SqlDataRecordMethod> sdrDataTypeMappings;
+        private static readonly Dictionary<Type, SqlDataRecordMethod> sdrDataTypeMappings;
 
 #pragma warning restore RECS0108 // Warns about static fields in generic types
 
-        private IEnumerable<string> excludedColumns;
+        private readonly IEnumerable<string> excludedColumns;
 
-        private IEnumerable<string> includedColumns;
+        private readonly IEnumerable<string> includedColumns;
 
-        private IEnumerable<T> parameterList { get; set; }
+        private readonly IEnumerable<T> parameterList;
 
-        private SortedList<int, FunctionStub> PropertyAccessors
-        {
-            get
-            {
-                return propertyAccessors;
-            }
-        }
+        private static SortedList<int, FunctionStub> PropertyAccessors => propertyAccessors;
 
         /// <summary>Initializes static members of the <see cref="TableValuedParameter{T}"/> class.</summary>
         static TableValuedParameter()
@@ -61,13 +106,13 @@ namespace DesignStreaks.Data.SqlClient.Types
             BuildPropertyAccessors();
         }
 
-        /// <summary>Initializes a new instance of the <see cref="TableValuedParameter{T}"/> class.</summary>
-        /// <param name="parameterList">The list of items to convert to a <see cref="TableValuedParameter{T}"/>.</param>
+        /// <summary>Initializes a new instance of the <see cref="TableValuedParameter{T}" /> class.</summary>
+        /// <param name="parameterList">The list of items to convert to a <see cref="TableValuedParameter{T}" />.</param>
         /// <param name="includedColumns">
-        ///   The list of column names to include in being mapped to the <see cref="TableValuedParameter{T}"/>. If null,
-        ///   all fields with <see cref="DbColumnAttribute"/> are mapped.
+        ///   The list of column names to include in being mapped to the <see cref="TableValuedParameter{T}" />. If null,
+        ///   all fields with <see cref="T:DesignStreaks.Data.DbColumnAttribute" /> are mapped.
         /// </param>
-        /// <param name="excludedColumns">The list of column names to exclude from being mapped to the <see cref="TableValuedParameter{T}"/>.</param>
+        /// <param name="excludedColumns">The list of column names to exclude from being mapped to the <see cref="TableValuedParameter{T}" />.</param>
         public TableValuedParameter(IEnumerable<T> parameterList, IEnumerable<string> includedColumns = null, IEnumerable<string> excludedColumns = null)
         {
             this.parameterList = parameterList;
@@ -81,10 +126,10 @@ namespace DesignStreaks.Data.SqlClient.Types
         /// </returns>
         IEnumerator<SqlDataRecord> IEnumerable<SqlDataRecord>.GetEnumerator()
         {
-            List<SqlMetaData> finalMetaDataParams = new List<SqlMetaData>();
-            List<FunctionStub> finalPropertySetters = new List<FunctionStub>();
+            var finalMetaDataParams = new List<SqlMetaData>();
+            var finalPropertySetters = new List<FunctionStub>();
 
-            int mdIndex = 0;
+            var mdIndex = 0;
 
             var hasDbColumnAttributes = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Any(prop => prop.IsDefined(typeof(DbColumnAttribute), false));
@@ -96,18 +141,20 @@ namespace DesignStreaks.Data.SqlClient.Types
                 // b) it has the DbColumnAttribute attribute.
                 // c) it is explicitly included.
                 // d) no field has the DbColumnAttribute and the field.
-                if ((!excludedColumns.Contains(fs.PropertyName) && ((hasDbColumnAttributes && fs.ColumnOrder >= 0)
+                if ((!excludedColumns.Contains(fs.PropertyName) 
+                     && (
+                         hasDbColumnAttributes && fs.ColumnOrder >= 0
                         || includedColumns.Contains(fs.PropertyName)
-                        || (!hasDbColumnAttributes && includedColumns.Count() == 0)))
-                        )
+                        || (!hasDbColumnAttributes && !this.includedColumns.Any())))
+                )
                 {
                     if (fs.MetaTypeEnum == SqlDbType.VarBinary)
                     {
-                        // Must specific max length for varbinary - md5 requires 16
+                        // Must specify max length for varbinary - md5 requires 16
                         finalMetaDataParams.Add(new SqlMetaData(
-                                        fs.PropertyName,
-                                        fs.MetaTypeEnum,
-                                        maxLength: 2048,
+                                        name: fs.PropertyName,
+                                        dbType: fs.MetaTypeEnum,
+                                        maxLength: 8000L,
                                         useServerDefault: false,
                                         isUniqueKey: true,
                                         columnSortOrder: System.Data.SqlClient.SortOrder.Ascending,
@@ -117,8 +164,8 @@ namespace DesignStreaks.Data.SqlClient.Types
                     else
                     {
                         finalMetaDataParams.Add(new SqlMetaData(
-                                        fs.PropertyName,
-                                        fs.MetaTypeEnum,
+                                        name: fs.PropertyName,
+                                        dbType: fs.MetaTypeEnum,
                                         useServerDefault: false,
                                         isUniqueKey: true,
                                         columnSortOrder: System.Data.SqlClient.SortOrder.Ascending,
@@ -130,11 +177,11 @@ namespace DesignStreaks.Data.SqlClient.Types
                 }
             }
 
-            SqlDataRecord sdr = new SqlDataRecord(finalMetaDataParams.ToArray());
+            var sdr = new SqlDataRecord(finalMetaDataParams.ToArray());
 
-            foreach (T item in parameterList)
+            foreach (var item in parameterList)
             {
-                for (int i = 0; i < finalPropertySetters.Count; ++i)
+                for (var i = 0; i < finalPropertySetters.Count; ++i)
                 {
                     finalPropertySetters[i].Setter(sdr, i, item);
                 }
@@ -146,7 +193,7 @@ namespace DesignStreaks.Data.SqlClient.Types
         /// <returns>An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.</returns>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            return this.PropertyAccessors.GetEnumerator();
+            return PropertyAccessors.GetEnumerator();
         }
 
         /// <summary>Builds the property accessors.</summary>
@@ -154,15 +201,13 @@ namespace DesignStreaks.Data.SqlClient.Types
         {
             propertyAccessors = new SortedList<int, FunctionStub>();
 
-            string output = String.Empty;
-
             // If the type contains any property with a DbColumnAttribute, those columns will be sorted first followed by
             // all additional columns.
             var numDbColumnAttributes = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Count(prop => prop.IsDefined(typeof(DbColumnAttribute), false));
 
-            List<string> invalidMappings = new List<string>();
-            int paramIndex = 0;
+            var invalidMappings = new List<string>();
+            var paramIndex = 0;
 
             typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Where(prop => prop.CanRead)
@@ -171,11 +216,9 @@ namespace DesignStreaks.Data.SqlClient.Types
                         .OrderBy(prop =>
                         {
                             paramIndex++;
-                            var columnAttributes = (prop.GetCustomAttributes(typeof(DbColumnAttribute), true));
+                            var ca = prop.GetCustomAttribute<DbColumnAttribute>();
 
-                            return columnAttributes.Length > 0
-                                            ? (columnAttributes[0] as DbColumnAttribute).Order
-                                            : numDbColumnAttributes + paramIndex;
+                            return ca?.Order ?? numDbColumnAttributes + paramIndex;
                         })
                         .ToList()
                         .ForEach(prop =>
@@ -187,7 +230,7 @@ namespace DesignStreaks.Data.SqlClient.Types
                             // BaseType of the property type.
                             if (sdrDataTypeMappings.ContainsKey(prop.PropertyType) || sdrDataTypeMappings.ContainsKey(prop.PropertyType.BaseType))
                             {
-                                FunctionStub fStub = CreatePropertyAccessorFunctionStub(prop, ref paramIndex);
+                                var fStub = CreatePropertyAccessorFunctionStub(prop, ref paramIndex);
 
                                 propertyAccessors.Add(paramIndex++, fStub);
                             }
@@ -197,7 +240,7 @@ namespace DesignStreaks.Data.SqlClient.Types
                             }
                         });
 
-            if (invalidMappings.Count() > 0)
+            if (invalidMappings.Any())
             {
                 throw new AggregateException(invalidMappings.Select(im => new InvalidOperationException($"The type '{ im }' does not have a mapping defined.")));
             }
@@ -207,22 +250,22 @@ namespace DesignStreaks.Data.SqlClient.Types
         /// <param name="prop">The property.</param>
         /// <param name="setterMethod">The <see cref="SqlDataRecord"/> setter method.</param>
         /// <returns>
-        ///   Returns an expression of type <see cref="Action{T1, T2, T3}">Action&lt;SqlDataRecord, System.Int32,
-        ///   T&gt;</see> containing the expression used to set the <see cref="SqlDataRecord"/> field with the property value.
+        ///   Returns an expression of type <see cref="T:System.Action{T1, T2, T3}">Action&lt;SqlDataRecord, System.Int32,
+        ///   T&gt;</see> containing the expression used to set the <see cref="T:Microsoft.SqlServer.Server.SqlDataRecord"/> field with the property value.
         /// </returns>
         private static Expression<Action<SqlDataRecord, int, T>> CreatePropertyAccessorFunctionExpression(PropertyInfo prop, SqlDataRecordMethod setterMethod)
         {
-            ParameterExpression instanceParam = Expression.Parameter(typeof(T), "obj");                                 // | T {obj};
+            var instanceParam = Expression.Parameter(typeof(T), "obj");                                                 // | T {obj};
                                                                                                                         // |
-            MemberExpression memberAccessExpression = Expression.MakeMemberAccess(instanceParam, prop);                 // | MemberExpression {memberAccessExpression} = {obj}.prop;
+            var memberAccessExpression = Expression.MakeMemberAccess(instanceParam, prop);                              // | MemberExpression {memberAccessExpression} = {obj}.prop;
                                                                                                                         // |
-            Expression bodyExpression = null;                                                                           // | Expression bodyExpression = null;
+            Expression bodyExpression;                                                                                  // | Expression bodyExpression = null;
                                                                                                                         // |
-                                                                                                                        // The Enum data type has been defined to pass the Enum value into a SqlString field of the Table Parameter // |
-                                                                                                                        // but the Enum data type cannot be automatically converted to a String object which causes the             // |
-                                                                                                                        // "Expression.Convert(memberAccessExpression, setter.SqlDataType)" to throw an exception.                  // |
-                                                                                                                        // As such, we need to call the "ToString" function on the value.                                           // |
-            if (prop.PropertyType.BaseType.Name.In("Enum", "System.Enum"))                                   // | if (prop.PropertyType.BaseType.Name.In(new[] { "Enum", "System.Enum" }))
+            // The Enum data type has been defined to pass the Enum value into a SqlString field of the Table Parameter // |
+            // but the Enum data type cannot be automatically converted to a String object which causes the             // |
+            // "Expression.Convert(memberAccessExpression, setter.SqlDataType)" to throw an exception.                  // |
+            // As such, we need to call the "ToString" function on the value.                                           // |
+            if (prop.PropertyType.BaseType?.Name.In("Enum", "System.Enum") ?? false)                                    // | if (prop.PropertyType.BaseType.Name.In(new[] { "Enum", "System.Enum" }))
             {                                                                                                           // | {
                 Expression toStringCall = Expression.Call(                                                              // |
                             memberAccessExpression,                                                                     // |
@@ -232,17 +275,18 @@ namespace DesignStreaks.Data.SqlClient.Types
             }                                                                                                           // | }
             else                                                                                                        // | else
             {                                                                                                           // | {
+                // ReSharper disable once AssignNullToNotNullAttribute
                 bodyExpression = prop.PropertyType == typeof(byte[])                                                    // |     bodyExpression = prop.PropertyType == typeof(byte[])
-                            ? (Expression)(Expression.New(typeof(SqlBinary).GetConstructor(                             // |
-                                            new[] { typeof(byte[]) }),                                             // |
-                                            memberAccessExpression))                                                    // |            ? new SqlBinary({memberAccessExpression})
+                            ? (Expression)(Expression.New(                                                              // |            ? new SqlBinary({memberAccessExpression})
+                                            typeof(SqlBinary).GetConstructor(new[] { typeof(byte[]) }),                 // |
+                                            memberAccessExpression))                                                    // |
                             : (Expression)(Expression.Convert(memberAccessExpression, setterMethod.SqlDataType));       // |            : Convert({memberAccessExpression})
             }                                                                                                           // | }
                                                                                                                         // |
-            ParameterExpression sdrParam = Expression.Parameter(typeof(SqlDataRecord), "sdr");                          // | SqlDataRecord {sdr};
-            ParameterExpression indexParam = Expression.Parameter(typeof(int), "i");                                    // | int {i};
+            var sdrParam = Expression.Parameter(typeof(SqlDataRecord), "sdr");                                          // | SqlDataRecord {sdr};
+            var indexParam = Expression.Parameter(typeof(int), "i");                                                    // | int {i};
                                                                                                                         // |
-            MethodCallExpression sdrSetMethod = Expression.Call(                                                        // |
+            var sdrSetMethod = Expression.Call(                                                                         // |
                             sdrParam,                                                                                   // |
                             setterMethod.SetterMethodInfo,                                                              // |
                             indexParam,                                                                                 // |
@@ -262,26 +306,24 @@ namespace DesignStreaks.Data.SqlClient.Types
         /// <returns>FunctionStub.</returns>
         private static FunctionStub CreatePropertyAccessorFunctionStub(PropertyInfo prop, ref int paramIndex)
         {
-            SqlDataRecordMethod setterMethod = sdrDataTypeMappings.ContainsKey(prop.PropertyType)
+            var setterMethod = sdrDataTypeMappings.ContainsKey(prop.PropertyType)
                         ? sdrDataTypeMappings[prop.PropertyType]
                         : sdrDataTypeMappings[prop.PropertyType.BaseType];
 
-            Expression<Action<SqlDataRecord, int, T>> lambda = CreatePropertyAccessorFunctionExpression(prop, setterMethod);
+            var lambda = CreatePropertyAccessorFunctionExpression(prop, setterMethod);
+            var ca = prop.GetCustomAttribute<DbColumnAttribute>();
 
-            FunctionStub fStub = new FunctionStub();
-            fStub.PropertyName = prop.Name;
-            fStub.MetaTypeEnum = setterMethod.TypeEnum;
-            fStub.Setter = lambda.Compile();
+            var fStub = new FunctionStub
+            (
+                prop.Name,
+                setterMethod.TypeEnum,
+                lambda.Compile(),
+                ca?.Order ?? -1
+            );
 
-            var columnAttributes = (prop.GetCustomAttributes(typeof(DbColumnAttribute), true));
 
-            paramIndex = columnAttributes.Length > 0
-                        ? (columnAttributes[0] as DbColumnAttribute).Order
-                        : paramIndex;
+            paramIndex = ca?.Order ?? paramIndex;
 
-            fStub.ColumnOrder = columnAttributes.Length > 0
-                        ? (columnAttributes[0] as DbColumnAttribute).Order
-                        : -1;
             return fStub;
         }
 
@@ -289,27 +331,32 @@ namespace DesignStreaks.Data.SqlClient.Types
         /// <returns>Dictionary&lt;Type, SqlDataRecordMethod&gt;.</returns>
         private static Dictionary<Type, SqlDataRecordMethod> DefineTypeMappingMethods()
         {
-            Dictionary<Type, SqlDataRecordMethod> sdrMethodNames = new Dictionary<Type, SqlDataRecordMethod>();
-            Type sdrType = typeof(SqlDataRecord);
+            var sdrMethodNames = new Dictionary<Type, SqlDataRecordMethod>();
+            var sdrType = typeof(SqlDataRecord);
 
             new List<SqlTypeMappingDefinition>() {
                 new SqlTypeMappingDefinition(typeof(byte[]), typeof(SqlBinary), "SetSqlBinary", SqlDbType.VarBinary),
                 new SqlTypeMappingDefinition(typeof(bool), typeof(SqlBoolean), "SetSqlBoolean", SqlDbType.Bit),
                 new SqlTypeMappingDefinition(typeof(byte), typeof(SqlByte), "SetSqlByte", SqlDbType.TinyInt),
-                //new SqlTypeMappingDefinition(typeof(byte[]),    typeof(SqlBytes), "SetSqlBytes", SqlDbType.Binary),
-                //new SqlTypeMappingDefinition(typeof(char[]),    typeof(SqlChars), "SetSqlChars", SqlDbType.NVarChar),
 
                 new SqlTypeMappingDefinition(typeof(int), typeof(SqlInt32), "SetSqlInt32", SqlDbType.Int),
                 new SqlTypeMappingDefinition(typeof(short), typeof(SqlInt16), "SetSqlInt16", SqlDbType.SmallInt),
                 new SqlTypeMappingDefinition(typeof(long), typeof(SqlInt64), "SetSqlInt64", SqlDbType.BigInt),
-                new SqlTypeMappingDefinition(typeof(string), typeof(SqlString), "SetSqlString", SqlDbType.Text),
-                new SqlTypeMappingDefinition(typeof(DateTime), typeof(SqlDateTime), "SetSqlDateTime", SqlDbType.DateTime),
                 new SqlTypeMappingDefinition(typeof(decimal), typeof(SqlDecimal), "SetSqlDecimal", SqlDbType.Decimal),
+                new SqlTypeMappingDefinition(typeof(float), typeof(SqlDouble), "SetSqlFloat", SqlDbType.Float),
+
+                new SqlTypeMappingDefinition(typeof(string), typeof(SqlString), "SetSqlString", SqlDbType.Text),
+
+                new SqlTypeMappingDefinition(typeof(DateTime), typeof(SqlDateTime), "SetSqlDateTime", SqlDbType.DateTime),
                 new SqlTypeMappingDefinition(typeof(Guid), typeof(SqlGuid), "SetSqlGuid", SqlDbType.UniqueIdentifier),
+
+                // Enums are to be stored in the database as the string representation of the enum value 'name'.
                 new SqlTypeMappingDefinition(typeof(Enum), typeof(SqlString), "SetSqlString", SqlDbType.Text),
 
+                //new SqlTypeMappingDefinition(typeof(byte[]),    typeof(SqlBytes), "SetSqlBytes", SqlDbType.Binary),
+                //new SqlTypeMappingDefinition(typeof(char[]),    typeof(SqlChars), "SetSqlChars", SqlDbType.NVarChar),
                 //new SqlTypeMappingDefinition(typeof(char),      typeof(SqlChars), "SetSqlChar", SqlDbType.Char),
-                new SqlTypeMappingDefinition(typeof(float), typeof(SqlDouble), "SetSqlFloat", SqlDbType.Float),
+
             }
                 .ForEach(md =>
                 {
@@ -343,16 +390,16 @@ namespace DesignStreaks.Data.SqlClient.Types
         private struct SqlTypeMappingDefinition
         {
             /// <summary>The method on the SqlDataRecord used to set the property.</summary>
-            public string SetterMethod;
+            public readonly string SetterMethod;
 
             /// <summary>The native (.NET) type to be mapped.</summary>
-            public Type NativeType;
+            public readonly Type NativeType;
 
             /// <summary>The Sql data type to map to.</summary>
-            public Type SqlDataType;
+            public readonly Type SqlDataType;
 
             /// <summary>The Sql enum representation of the Sql data type.</summary>
-            public SqlDbType SqlMetaType;
+            public readonly SqlDbType SqlMetaType;
 
             /// <summary>Initializes a new instance of the <see cref="SqlTypeMappingDefinition"/> struct.</summary>
             /// <param name="nativeType">The native (.NET) type to be mapped.</param>
@@ -370,18 +417,32 @@ namespace DesignStreaks.Data.SqlClient.Types
 
         private class FunctionStub
         {
-            public int ColumnOrder { get; set; }
+            /// <summary>Initializes a new instance of the <see cref="FunctionStub" /> class.</summary>
+            /// <param name="propertyName">The name of the property to set.</param>
+            /// <param name="metaTypeEnum">The Sql enum representation of the Sql data type.</param>
+            /// <param name="setter">The <see cref="Action" /> used to set the property.</param>
+            /// <param name="columnOrder">The position the column should appear in the table parameter.</param>
+            public FunctionStub(string propertyName, SqlDbType metaTypeEnum, Action<SqlDataRecord, int, T> setter, int columnOrder)
+            {
+                this.PropertyName = propertyName;
+                this.MetaTypeEnum = metaTypeEnum;
+                this.Setter = setter;
+                this.ColumnOrder = columnOrder;
+            }
+
+            /// <summary>The position the column should appear in the table parameter.</summary>
+            public readonly int ColumnOrder;
 
             /// <summary>The Sql enum representation of the Sql data type.</summary>
-            public SqlDbType MetaTypeEnum { get; set; }
+            public readonly SqlDbType MetaTypeEnum;
 
             /// <summary>The name of the property to set.</summary>
             /// <value>The name of the property.</value>
-            public string PropertyName { get; set; }
+            public readonly string PropertyName;
 
             /// <summary>The <see cref="Action"/> used to set the property.</summary>
             /// <value>The setter.</value>
-            public Action<SqlDataRecord, int, T> Setter { get; set; }
+            public readonly Action<SqlDataRecord, int, T> Setter;
         }
     }
 }
